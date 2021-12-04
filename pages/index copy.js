@@ -1,41 +1,42 @@
 import { useState, useEffect } from "react";
 import Card from "../components/Card"
 
-const Main = () => {
+// export const getServerSideProps = async () => {
+//   const response = await fetch(`https://getlens-master.stage.dev.family/api/pages/obektivy`);
+//   const data = await response.json();
 
-  const [minPrice, setMinPrice] = useState('0')
-  const [maxPrice, setMaxPrice] = useState('79000')
-  const [canonFilter, setCanonFilter] = useState(false)
-  const [nikonFilter, setNikonFilter] = useState(false)
-  const [responseData, setFilterData] = useState(null)
+//   // console.log(data)
+
+//   if(!data) {
+//     return {
+//       notFound: true,
+//     }
+//   }
+
+//   return {
+//     props: {responseData: data.products }
+//   }
+// }
+
+const Main = ({responseData}) => {
+
+  const [priceFilter, setPriceFilter] = useState(['0', '79000'])
+  const [brandFilter, setBrandFilter] = useState([false, false])
+  const [filterData, setFilterData] = useState(null)
 
   useEffect(() => {
     const fetchData = async () => {
-      const brandSFilterValue = () => {
-        
-        if(canonFilter === nikonFilter) {
-          return ''
-        } else if (canonFilter) {
-          return 'brands[]=1&'
-        } else if (nikonFilter) {
-          return 'brands[]=9&'
-        }
-      }
-
-      const response = await fetch(`https://getlens-master.stage.dev.family/api/pages/obektivy?${brandSFilterValue()}price[min]=${minPrice}&price[max]=${maxPrice}`);
+      const response = await fetch(`https://getlens-master.stage.dev.family/api/pages/obektivy`);
       const data = await response.json();
-      setFilterData(data.products)
+      setFilterData(data)
     }
+  });
 
-    fetchData()
-  },[canonFilter, nikonFilter, minPrice, maxPrice]);
-
-  const inputHandler = (value, setValue) => {
-    const numberPattern = /^[0-9]*$/gm
-    numberPattern.test(value) && setValue(value)
-  }
-
+  
+  
+  // console.log(responseData)
   return (
+    // <div> hello </div>
     <div className="component">
       <aside className="filter">
         <div className="filter__title-wrapper">
@@ -43,7 +44,7 @@ const Main = () => {
             Товаров {responseData && responseData.length}
           </span>
           <h2 className="filter__title">
-            Камеры
+            {responseData && responseData[0].category.title}
           </h2>
         </div>  
         <div className="filter__range">
@@ -51,13 +52,13 @@ const Main = () => {
           <div className="filter__range-inputs">
             <input
               type="text"
-              value={minPrice}
-              onChange={(event) => inputHandler(event.target.value, setMinPrice)}
+              value={priceFilter[0]}
+              onChange={(event) => setPriceFilter([event.target.value, priceFilter[1]])}
             />
             <input
               type="text"
-              value={maxPrice}
-              onChange={(event) => inputHandler(event.target.value, setMaxPrice)}
+              value={priceFilter[1]}
+              onChange={(event) => setPriceFilter([priceFilter[0], event.target.value])}
             />
           </div>
         </div>
@@ -68,8 +69,8 @@ const Main = () => {
               <input
                 type="checkbox"
                 id="canon"
-                checked={canonFilter}
-                onChange={(event) => setCanonFilter(event.target.checked) }
+                checked={brandFilter[0]}
+                onChange={(event) => setBrandFilter([event.target.checked, brandFilter[1]]) }
               />
               <label htmlFor="canon"> Canon</label>
             </li>
@@ -77,8 +78,8 @@ const Main = () => {
               <input
                 type="checkbox"
                 id="nikon"
-                checked={nikonFilter}
-                onChange={(event) => setNikonFilter(event.target.checked) }
+                checked={brandFilter[1]}
+                onChange={(event) => setBrandFilter([brandFilter[0], event.target.checked]) }
               />
               <label htmlFor="nikon">Nikon</label>
             </li>
