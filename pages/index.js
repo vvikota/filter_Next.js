@@ -1,41 +1,73 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Card from "../components/Card"
+import {useRouter} from 'next/router'
 
-const Main = () => {
+export const getServerSideProps = async (context) => {
+  const { brands, minPrice, maxPrice } = context.query
+  let query = ''
+
+  if(!brands || brands.length === 0 || brands.length === 2 ){
+    query = ''
+  } else if (brands.indexOf('canon') >= 0){
+    query = `?brands[]=1&price[min]=${minPrice}&price[max]=${maxPrice}`
+  } else if (brands.indexOf('nikon') >= 0){
+    query = `?brands[]=9&price[min]=${minPrice}&price[max]=${maxPrice}`
+  }
+
+  const response = await fetch(`https://getlens-master.stage.dev.family/api/pages/obektivy${query}`)
+  const data = await response.json()
+
+  if (!data) {
+    return {
+      notFound: true,
+    }
+  }
+
+  return {
+    props: {responseData: data.products}
+  }
+}
+
+const Main = ({responseData}) => {
+  const router = useRouter()
 
   const [minPrice, setMinPrice] = useState('0')
   const [maxPrice, setMaxPrice] = useState('79000')
-  const [canonFilter, setCanonFilter] = useState(false)
-  const [nikonFilter, setNikonFilter] = useState(false)
-  const [responseData, setFilterData] = useState(null)
+  const [brandsFilter, setBrandsFilter] = useState([])
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const brandSFilterValue = () => {
-        
-        if(canonFilter === nikonFilter) {
-          return ''
-        } else if (canonFilter) {
-          return 'brands[]=1&'
-        } else if (nikonFilter) {
-          return 'brands[]=9&'
-        }
+
+  const brandsHandleClick = (brand) => {
+    setBrandsFilter(prevState => {
+      const brandIndex = prevState.indexOf(brand)
+       
+      if(brandIndex < 0){
+        const newState = [...prevState, brand]
+        router.push({query: { brands: newState, minPrice: [minPrice], maxPrice: [maxPrice] }})
+        return newState
+
+      } else {
+        const newState = [...prevState]
+        newState.splice(brandIndex, 1)
+        router.push({query: { brands: newState, minPrice: [minPrice], maxPrice: [maxPrice] }})
+        return newState
       }
-
-      const response = await fetch(`https://getlens-master.stage.dev.family/api/pages/obektivy?${brandSFilterValue()}price[min]=${minPrice}&price[max]=${maxPrice}`);
-      const data = await response.json();
-      setFilterData(data.products)
-    }
-
-    fetchData()
-  },[canonFilter, nikonFilter, minPrice, maxPrice]);
-
-  const inputHandler = (value, setValue) => {
-    const numberPattern = /^[0-9]*$/gm
-    numberPattern.test(value) && setValue(value)
+    })
   }
 
-  return (
+  const inputHandler = (value, setValue, type) => {
+    const numberPattern = /^[0-9]*$/gm
+
+    if(numberPattern.test(value)){
+      setValue(value)
+      if(type === 'min'){
+        router.push({query: { brands: brandsFilter, minPrice: [value], maxPrice: [maxPrice] }})
+      } else {
+        router.push({query: { brands: brandsFilter, minPrice: [minPrice], maxPrice: [value] }})
+      }
+    }
+  }
+    
+  return (    
     <div className="component">
       <aside className="filter">
         <div className="filter__title-wrapper">
@@ -52,12 +84,12 @@ const Main = () => {
             <input
               type="text"
               value={minPrice}
-              onChange={(event) => inputHandler(event.target.value, setMinPrice)}
+              onChange={(event) => inputHandler(event.target.value, setMinPrice, 'min')}
             />
             <input
               type="text"
               value={maxPrice}
-              onChange={(event) => inputHandler(event.target.value, setMaxPrice)}
+              onChange={(event) => inputHandler(event.target.value, setMaxPrice, 'max')}
             />
           </div>
         </div>
@@ -68,8 +100,8 @@ const Main = () => {
               <input
                 type="checkbox"
                 id="canon"
-                checked={canonFilter}
-                onChange={(event) => setCanonFilter(event.target.checked) }
+                checked={brandsFilter.indexOf('canon') >= 0}
+                onChange={() => brandsHandleClick('canon') }
               />
               <label htmlFor="canon"> Canon</label>
             </li>
@@ -77,8 +109,8 @@ const Main = () => {
               <input
                 type="checkbox"
                 id="nikon"
-                checked={nikonFilter}
-                onChange={(event) => setNikonFilter(event.target.checked) }
+                checked={brandsFilter.indexOf('nikon') >= 0}
+                onChange={() => brandsHandleClick('nikon') }
               />
               <label htmlFor="nikon">Nikon</label>
             </li>
